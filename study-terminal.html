@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STUDY.EXE — Computer Architecture Review Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e0a;
+  --bg2:#0d140d;
+  --panel:#0f1a0f;
+  --line:#1d3d20;
+  --green:#3dff7a;
+  --green-dim:#1f7a3d;
+  --amber:#ffb000;
+  --red:#ff5c5c;
+  --cyan:#5ce1ff;
+  --text:#d7f5df;
+  --text-dim:#7fae8a;
+  --white:#f2fff5;
+  --shadow: 0 0 12px rgba(61,255,122,.25);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(ellipse at top, #0f1a0f 0%, #070a07 70%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+  color:var(--text);
+  font-family:'IBM Plex Mono', monospace;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+::selection{background:var(--green-dim);color:var(--white);}
+::-webkit-scrollbar{width:10px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--green-dim);border-radius:0;}
+
+/* ---------- BOOT SCREEN ---------- */
+#boot{
+  position:fixed;inset:0;background:#050705;color:var(--green);
+  font-size:14px;line-height:1.6;padding:24px;z-index:999;
+  white-space:pre-wrap;
+}
+#boot .cursor{display:inline-block;width:8px;height:14px;background:var(--green);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px;}
+@keyframes blink{50%{opacity:0;}}
+#boot.hidden{display:none;}
+
+/* ---------- LAYOUT ---------- */
+.wrap{max-width:980px;margin:0 auto;padding:18px 16px 80px;}
+header.top{
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px;flex-wrap:wrap;gap:10px;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand .glyph{
+  width:38px;height:38px;border:1px solid var(--green-dim);display:flex;align-items:center;justify-content:center;
+  color:var(--green);font-family:'Press Start 2P';font-size:10px;box-shadow:var(--shadow);background:#081008;
+}
+.brand h1{font-size:15px;margin:0;letter-spacing:.5px;color:var(--white);}
+.brand .sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;}
+nav.tabs button{
+  background:transparent;border:1px solid var(--line);color:var(--text-dim);
+  font-family:inherit;font-size:12px;padding:8px 14px;cursor:pointer;letter-spacing:.5px;transition:.15s;
+}
+nav.tabs button:hover{border-color:var(--green-dim);color:var(--text);}
+nav.tabs button.active{background:var(--green-dim);color:#04140a;border-color:var(--green);font-weight:600;}
+
+.statusbar{
+  display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);
+  border-top:1px solid var(--line);padding-top:8px;margin-top:28px;flex-wrap:wrap;gap:6px;
+}
+
+/* ---------- GENERIC PANEL ---------- */
+.panel{
+  border:1px solid var(--line);background:linear-gradient(180deg, var(--panel), #0a120a);
+  padding:20px;margin-bottom:16px;position:relative;
+}
+.panel::before{
+  content:attr(data-tag);position:absolute;top:-9px;left:12px;background:var(--bg2);
+  color:var(--green);font-size:10px;padding:0 6px;letter-spacing:1px;
+}
+h2.section-title{font-size:14px;color:var(--white);letter-spacing:1px;margin:0 0 4px;text-transform:uppercase;}
+p.hint{color:var(--text-dim);font-size:12px;margin:0 0 14px;line-height:1.5;}
+
+/* ---------- DASHBOARD ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.stat-card{border:1px solid var(--line);padding:14px;background:#091209;}
+.stat-card .cat-name{font-size:12px;color:var(--white);margin-bottom:8px;display:flex;justify-content:space-between;}
+.stat-card .cat-name span.code{color:var(--green);}
+.bar-track{height:10px;background:#050a05;border:1px solid var(--line);margin:6px 0;position:relative;overflow:hidden;}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));transition:width .4s;}
+.bar-fill.low{background:linear-gradient(90deg,#5c1a1a,var(--red));}
+.bar-fill.mid{background:linear-gradient(90deg,#5c3d00,var(--amber));}
+.stat-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);}
+.focus-flag{color:var(--red);font-size:10px;margin-top:4px;}
+
+.summary-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+.summary-box{flex:1;min-width:140px;border:1px solid var(--line);padding:14px;text-align:center;background:#091209;}
+.summary-box .num{font-size:26px;color:var(--green);font-weight:700;}
+.summary-box .lbl{font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-top:4px;text-transform:uppercase;}
+
+/* ---------- QUIZ SETUP ---------- */
+.opt-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.chip{
+  border:1px solid var(--line);padding:7px 12px;font-size:11px;cursor:pointer;color:var(--text-dim);
+  background:#081008;user-select:none;transition:.15s;
+}
+.chip.selected{border-color:var(--green);color:var(--green);background:#0d2513;box-shadow:0 0 8px rgba(61,255,122,.15);}
+.btn{
+  background:var(--green-dim);color:#04140a;border:1px solid var(--green);padding:10px 20px;font-family:inherit;
+  font-size:12px;letter-spacing:.5px;cursor:pointer;font-weight:700;transition:.15s;
+}
+.btn:hover{background:var(--green);box-shadow:var(--shadow);}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:400;}
+.btn.ghost:hover{border-color:var(--green-dim);color:var(--green);}
+.btn.danger{background:transparent;color:var(--red);border:1px solid #5c1a1a;font-weight:400;}
+.btn.danger:hover{background:#2a0a0a;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ---------- QUIZ RUNNER ---------- */
+.q-progress{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-dim);margin-bottom:10px;}
+.q-progress .track{flex:1;height:4px;background:#050a05;margin:0 12px;position:relative;}
+.q-progress .fill{height:100%;background:var(--green);}
+.badge{display:inline-block;font-size:9px;padding:2px 7px;border:1px solid var(--line);letter-spacing:.5px;text-transform:uppercase;margin-right:6px;}
+.badge.easy{color:var(--cyan);border-color:#0d4a5c;}
+.badge.medium{color:var(--amber);border-color:#5c4400;}
+.badge.hard{color:var(--red);border-color:#5c1a1a;}
+.badge.cat{color:var(--text-dim);}
+.q-text{font-size:15px;color:var(--white);line-height:1.6;margin:14px 0;}
+.q-type-tag{font-size:9px;color:#050a05;background:var(--green-dim);padding:2px 6px;letter-spacing:1px;}
+
+.mcq-list{display:flex;flex-direction:column;gap:8px;margin:14px 0;}
+.mcq-opt{
+  border:1px solid var(--line);padding:11px 14px;font-size:13px;cursor:pointer;background:#081008;
+  display:flex;gap:10px;transition:.12s;
+}
+.mcq-opt:hover{border-color:var(--green-dim);}
+.mcq-opt .k{color:var(--green);font-weight:700;}
+.mcq-opt.picked{border-color:var(--cyan);background:#081a1e;}
+.mcq-opt.correct{border-color:var(--green);background:#0d2513;color:var(--green);}
+.mcq-opt.wrong{border-color:var(--red);background:#2a0a0a;color:var(--red);}
+
+textarea, input[type=text]{
+  width:100%;background:#050a05;border:1px solid var(--line);color:var(--white);font-family:inherit;
+  font-size:13px;padding:10px;margin-top:8px;resize:vertical;
+}
+textarea:focus, input[type=text]:focus{outline:none;border-color:var(--green);}
+
+.feedback{margin-top:14px;padding:12px 14px;border-left:3px solid var(--green);background:#081008;font-size:12px;line-height:1.6;}
+.feedback.bad{border-left-color:var(--red);}
+.feedback .ans{color:var(--green);font-weight:600;}
+.feedback .miss{color:var(--red);}
+.feedback .hit{color:var(--green);}
+
+.enum-list{list-style:none;padding:0;margin:8px 0 0;font-size:12px;}
+.enum-list li{padding:3px 0;border-bottom:1px dashed #14251a;}
+.enum-list li.hit::before{content:"[x] ";color:var(--green);}
+.enum-list li.miss::before{content:"[ ] ";color:var(--text-dim);}
+
+.qa-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+
+/* ---------- FLASHCARDS ---------- */
+.card-stage{display:flex;justify-content:center;margin:20px 0;}
+.flashcard{
+  width:100%;max-width:520px;min-height:220px;border:1px solid var(--line);background:#081008;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;cursor:pointer;
+  position:relative;transition:.25s; box-shadow:0 0 0 rgba(0,0,0,0);
+}
+.flashcard:hover{border-color:var(--green-dim);}
+.flashcard .face-label{position:absolute;top:10px;left:12px;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+.flashcard .content{font-size:15px;line-height:1.6;color:var(--white);white-space:pre-wrap;}
+.flashcard.back .content{color:var(--green);font-size:13px;}
+.card-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);max-width:520px;margin:0 auto 10px;}
+.card-nav{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.status-pill{font-size:9px;padding:2px 8px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--line);}
+.status-pill.new{color:var(--text-dim);}
+.status-pill.known{color:var(--green);border-color:var(--green-dim);}
+.status-pill.review{color:var(--amber);border-color:#5c4400;}
+
+.empty-state{text-align:center;color:var(--text-dim);font-size:12px;padding:40px 10px;}
+
+@media (max-width:600px){
+  .brand h1{font-size:13px;}
+  nav.tabs button{padding:7px 10px;font-size:11px;}
+  .q-text{font-size:14px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div id="boot"><span id="boot-text"></span><span class="cursor"></span></div>
+
+<div class="wrap" id="app" style="display:none;">
+  <header class="top">
+    <div class="brand">
+      <div class="glyph">01</div>
+      <div>
+        <h1>STUDY.EXE — Data Rep &amp; Computer Architecture</h1>
+        <div class="sub">Unlimited retries · Auto-tracked mastery · covers every source doc, down to the small print</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button data-tab="dash" class="active">Dashboard</button>
+      <button data-tab="quiz">Quiz</button>
+      <button data-tab="flash">Flashcards</button>
+    </nav>
+  </header>
+
+  <main id="view-dash"></main>
+  <main id="view-quiz" style="display:none;"></main>
+  <main id="view-flash" style="display:none;"></main>
+
+  <div class="statusbar">
+    <span id="status-left">C:\STUDY&gt; ready_</span>
+    <span id="status-right"></span>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   QUESTION BANK — sourced from all 6 uploaded materials
+   type: mcq | id | enum
+   ========================================================= */
+const CATEGORIES = [
+  {id:'rep',    name:'Text, Image & Number Representation'},
+  {id:'ieee',   name:'IEEE 754 Floating Point'},
+  {id:'dos',    name:'DOS & DEBUG Commands'},
+  {id:'arch',   name:'Von Neumann Architecture & CPU'},
+  {id:'reg',    name:'Registers & Flags'},
+  {id:'numsys', name:'Number Systems'},
+  {id:'signed', name:'Signed Integers & Complements'},
+  {id:'ascii',  name:'ASCII & Unicode'}
+];
+
+const Q = [
+// ---------------- REP ----------------
+{id:'rep1',cat:'rep',type:'mcq',diff:'easy',q:"What does ASCII stand for?",opts:["American Standard Code for Information Interchange","American Standard Computer Interchange Index","Advanced System Code for Information Interchange","American Symbolic Code for Information Interchange"],ans:0},
+{id:'rep2',cat:'rep',type:'id',diff:'easy',q:"How many bits does ASCII use to represent one character of the English alphabet?",ans:["8","8 bits","8-bit"]},
+{id:'rep3',cat:'rep',type:'id',diff:'medium',q:"In the worked example spelling 'wake up!', the byte 01101011 represents which character?",ans:["k"]},
+{id:'rep4',cat:'rep',type:'id',diff:'easy',q:"What term is used for the small picture elements that make up a digital image?",ans:["pixel","pixels"]},
+{id:'rep5',cat:'rep',type:'id',diff:'medium',q:"What is the collection of encoded pixels of an image called?",ans:["bitmap"]},
+{id:'rep6',cat:'rep',type:'mcq',diff:'easy',q:"How many bytes are typically used to represent a single pixel in a colour image?",opts:["1","2","3","4"],ans:2},
+{id:'rep7',cat:'rep',type:'id',diff:'easy',q:"What colour model combines red, green and blue light to represent a wide spectrum of colour?",ans:["rgb","rgb colour model","rgb color model"]},
+{id:'rep8',cat:'rep',type:'id',diff:'medium',q:"GIF reduces bitmap file size by limiting the assignable colours per pixel to how many?",ans:["256"]},
+{id:'rep9',cat:'rep',type:'mcq',diff:'medium',q:"Which compression method is commonly used to compress photographs?",opts:["JPEG","GIF","BMP","TIFF"],ans:0},
+{id:'rep10',cat:'rep',type:'id',diff:'hard',q:"What do the letters JPEG stand for?",ans:["joint photographic experts group"]},
+{id:'rep11',cat:'rep',type:'id',diff:'hard',q:"What do the letters GIF stand for?",ans:["graphic interchange format"]},
+{id:'rep12',cat:'rep',type:'id',diff:'medium',q:"A simple black-and-white image can be represented using how many bit(s) per pixel?",ans:["1","1 bit","single bit"]},
+{id:'rep13',cat:'rep',type:'id',diff:'medium',q:"A black-and-white image with varying shades of grey typically uses how many bits (i.e., how many bytes) per pixel?",ans:["8","8 bits","one byte","1 byte"]},
+{id:'rep14',cat:'rep',type:'enum',diff:'hard',q:"List the THREE forms of data explicitly discussed in the 'Data Representation' module (1.2).",items:["text","images","numbers"]},
+{id:'rep15',cat:'rep',type:'id',diff:'hard',q:"Using pure binary (not ASCII) representation, what is the largest number representable with 8 bits, according to the module's wording?",ans:["127"]},
+{id:'rep16',cat:'rep',type:'id',diff:'hard',q:"Why is ASCII not ideal for representing numbers used within a calculation (per the module)?",ans:["because in ascii a number is merely a symbol, the same as a letter, not a true numeric value usable in math"]},
+
+// ---------------- IEEE 754 ----------------
+{id:'ieee1',cat:'ieee',type:'id',diff:'easy',q:"What does IEEE stand for?",ans:["institute of electrical and electronics engineers"]},
+{id:'ieee2',cat:'ieee',type:'id',diff:'medium',q:"In what year was the IEEE 754 standard established?",ans:["1985"]},
+{id:'ieee3',cat:'ieee',type:'enum',diff:'medium',q:"List the THREE basic components of IEEE 754.",items:["sign of mantissa","biased exponent","normalised mantissa"]},
+{id:'ieee4',cat:'ieee',type:'mcq',diff:'easy',q:"In IEEE 754 single precision, how many bits are used for the mantissa?",opts:["23","52","8","11"],ans:0},
+{id:'ieee5',cat:'ieee',type:'mcq',diff:'easy',q:"In IEEE 754 double precision, how many bits are used for the exponent?",opts:["8","11","52","23"],ans:1},
+{id:'ieee6',cat:'ieee',type:'id',diff:'medium',q:"What is the bias value used in IEEE 754 single precision?",ans:["127"]},
+{id:'ieee7',cat:'ieee',type:'id',diff:'medium',q:"What is the bias value used in IEEE 754 double precision?",ans:["1023"]},
+{id:'ieee8',cat:'ieee',type:'id',diff:'hard',q:"In the worked example converting 85.125, what is the whole number part (85) written in binary?",ans:["1010101"]},
+{id:'ieee9',cat:'ieee',type:'id',diff:'hard',q:"In the worked example, what is the single-precision biased exponent (decimal) for 85.125?",ans:["133"]},
+{id:'ieee10',cat:'ieee',type:'id',diff:'hard',q:"What is the hexadecimal form of the IEEE 754 SINGLE precision representation of 85.125?",ans:["42aa4000"]},
+{id:'ieee11',cat:'ieee',type:'id',diff:'hard',q:"What is the hexadecimal form of the IEEE 754 DOUBLE precision representation of 85.125?",ans:["4055480000000000"]},
+{id:'ieee12',cat:'ieee',type:'mcq',diff:'medium',q:"In IEEE 754, an exponent of all ONES with a mantissa of all ZEROS represents:",opts:["Zero","Infinity","A denormalized number","NaN"],ans:1},
+{id:'ieee13',cat:'ieee',type:'mcq',diff:'medium',q:"In IEEE 754, an exponent of all ZEROS with a NON-zero mantissa represents:",opts:["Infinity","NaN","A denormalized number","Zero"],ans:2},
+{id:'ieee14',cat:'ieee',type:'mcq',diff:'hard',q:"What is the result of ±Infinity × 0 in IEEE 754 special operations?",opts:["Infinity","0","NaN","Undefined error"],ans:2},
+{id:'ieee15',cat:'ieee',type:'id',diff:'hard',q:"What is the result of n ÷ ±Infinity (for finite n)?",ans:["0"]},
+{id:'ieee16',cat:'ieee',type:'enum',diff:'hard',q:"List the FIVE distinct numerical ranges single-precision floats cannot represent, per the module.",items:["negative overflow","negative underflow","zero","positive underflow","positive overflow"]},
+{id:'ieee17',cat:'ieee',type:'id',diff:'medium',q:"In the CS2052 formula N = (-1)^s [1.m] × 2^(E-127), what does E represent (as opposed to e)?",ans:["the stored biased exponent","stored exponent"]},
+{id:'ieee18',cat:'ieee',type:'id',diff:'medium',q:"For IEEE single precision, what is the exponent field E's allowed decimal range before the reserved values (0 and 255)?",ans:["1 to 254"]},
+{id:'ieee19',cat:'ieee',type:'id',diff:'hard',q:"For the CS2052 example of 17.15 in single precision, what value of E (biased exponent) results?",ans:["131"]},
+{id:'ieee20',cat:'ieee',type:'id',diff:'medium',q:"What is the maximum representable number in IEEE single precision, expressed as a power of 2?",ans:["2^128","2 128","2 to the 128"]},
+{id:'ieee21',cat:'ieee',type:'id',diff:'medium',q:"In single precision, the exponent e (unbiased, actual) ranges from -126 to what value?",ans:["127","+127"]},
+{id:'ieee22',cat:'ieee',type:'id',diff:'hard',q:"IEEE 754 double precision total effective range is approximately ± what power of 10?",ans:["10^308.25","10 308.25"]},
+
+// ---------------- DOS & DEBUG ----------------
+{id:'dos1',cat:'dos',type:'id',diff:'easy',q:"What type of software is DEBUG classified as?",ans:["debugger","a line-oriented debugger"]},
+{id:'dos2',cat:'dos',type:'enum',diff:'medium',q:"List all EIGHT common DOS commands mentioned (command names only, e.g. CLS).",items:["cls","cd","dir","copy","del","ren","md","rd"]},
+{id:'dos3',cat:'dos',type:'id',diff:'easy',q:"What format does DEBUG use to display all program code and data?",ans:["hexadecimal","hex"]},
+{id:'dos4',cat:'dos',type:'id',diff:'hard',q:"What was the maximum size (in bytes) of a .COM program DEBUG could originally handle?",ans:["65280","65,280"]},
+{id:'dos5',cat:'dos',type:'id',diff:'hard',q:"Why does DEBUG's usable .COM size get reduced by 256 bytes?",ans:["debug uses offset 00 through ff hex for internal data such as the name of the loaded file"]},
+{id:'dos6',cat:'dos',type:'enum',diff:'medium',q:"List the FOUR advantages of DEBUG mentioned in the notes.",items:["it is free","it is universally available","it is simple to use","it requires relatively little memory"]},
+{id:'dos7',cat:'dos',type:'mcq',diff:'easy',q:"Which DEBUG command quits the debug session and returns to DOS?",opts:["Q","X","E","D"],ans:0},
+{id:'dos8',cat:'dos',type:'mcq',diff:'medium',q:"Which DEBUG command shows the sum and difference of two 4-bit hex numbers?",opts:["R","H","A","U"],ans:1},
+{id:'dos9',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command displays all registers and their values?",ans:["r"]},
+{id:'dos10',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command lets you key data/instructions into memory at a specific address?",ans:["e"]},
+{id:'dos11',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command displays memory contents in hex and ASCII form?",ans:["d"]},
+{id:'dos12',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command lets you create a program using mnemonic/symbolic code?",ans:["a"]},
+{id:'dos13',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command runs a program in single-step mode?",ans:["t"]},
+{id:'dos14',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command runs the whole program in memory and displays output?",ans:["g"]},
+{id:'dos15',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command lists (disassembles) the instructions in a program?",ans:["u"]},
+{id:'dos16',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command gives your program a name with a .COM extension?",ans:["n"]},
+{id:'dos17',cat:'dos',type:'id',diff:'medium',q:"Which single-letter DEBUG command saves a program onto disk storage?",ans:["w"]},
+{id:'dos18',cat:'dos',type:'mcq',diff:'easy',q:"Are DEBUG commands case sensitive?",opts:["Yes","No"],ans:1},
+{id:'dos19',cat:'dos',type:'enum',diff:'hard',q:"List all EIGHT basic assembly instructions used in DEBUG that are covered in the notes.",items:["mov","add","sub","mul","div","inc","dec","loop"]},
+{id:'dos20',cat:'dos',type:'id',diff:'medium',q:"In MUL, if the product is greater than 16 bits, where is the overflow stored?",ans:["dx","dx register"]},
+{id:'dos21',cat:'dos',type:'id',diff:'medium',q:"In DIV, where is the quotient stored and where is the remainder stored?",ans:["quotient in ax, remainder in dx"]},
+{id:'dos22',cat:'dos',type:'id',diff:'medium',q:"Which register must contain the count value before a LOOP starts, and what happens to it each iteration?",ans:["cx; it automatically decrements by one each loop"]},
+{id:'dos23',cat:'dos',type:'id',diff:'hard',q:"In the sample DEBUG program, what hex value represents the Line Feed control character?",ans:["0a"]},
+{id:'dos24',cat:'dos',type:'id',diff:'hard',q:"In the sample DEBUG program, what hex value represents the Carriage Return control character?",ans:["0d"]},
+{id:'dos25',cat:'dos',type:'id',diff:'medium',q:"What word appears on screen (the DEBUG prompt symbol) once DEBUG is ready to accept commands?",ans:["hyphen","-"]},
+
+// ---------------- ARCHITECTURE ----------------
+{id:'arch1',cat:'arch',type:'enum',diff:'easy',q:"Name the THREE major components of a typical computer.",items:["processor","memory","input and output devices"]},
+{id:'arch2',cat:'arch',type:'id',diff:'easy',q:"The Von Neumann architecture is named after whom?",ans:["john von neumann"]},
+{id:'arch3',cat:'arch',type:'id',diff:'medium',q:"What key concept did Von Neumann architecture introduce regarding data and instructions?",ans:["storing both data and instructions in the same memory"]},
+{id:'arch4',cat:'arch',type:'enum',diff:'medium',q:"Name the TWO historical types of computers described.",items:["fixed program computers","stored program computers"]},
+{id:'arch5',cat:'arch',type:'id',diff:'easy',q:"Give the example provided of a Fixed Program Computer.",ans:["calculator","calculators"]},
+{id:'arch6',cat:'arch',type:'id',diff:'medium',q:"What is the 'Von Neumann bottleneck'?",ans:["instructions can only be done one at a time and executed sequentially, limiting cpu performance because of the shared bus"]},
+{id:'arch7',cat:'arch',type:'enum',diff:'hard',q:"List the FIVE advantages of Von Neumann architecture.",items:["simplified design","cost-effective","flexibility","ease of programming","widely adopted"]},
+{id:'arch8',cat:'arch',type:'enum',diff:'hard',q:"List the FIVE limitations of Von Neumann architecture.",items:["memory bottleneck","sequential processing","scalability issues","energy inefficiency","latency"]},
+{id:'arch9',cat:'arch',type:'enum',diff:'hard',q:"List the FIVE applications of Von Neumann architecture mentioned.",items:["general-purpose computing","embedded systems","software development","education","gaming and multimedia"]},
+{id:'arch10',cat:'arch',type:'id',diff:'easy',q:"What does ALU stand for?",ans:["arithmetic logic unit"]},
+{id:'arch11',cat:'arch',type:'enum',diff:'medium',q:"List the SEVEN components shown in the basic CPU structure diagram.",items:["memory","control unit","alu","input","output","processor","accumulator"]},
+{id:'arch12',cat:'arch',type:'id',diff:'medium',q:"What does PC stand for among CPU registers, and what does it do?",ans:["program counter; keeps track of the address of the next instruction to be executed"]},
+{id:'arch13',cat:'arch',type:'id',diff:'medium',q:"What does IR stand for and what does it hold?",ans:["instruction register; holds the current instruction being executed"]},
+{id:'arch14',cat:'arch',type:'id',diff:'medium',q:"What does MAR stand for?",ans:["memory address register"]},
+{id:'arch15',cat:'arch',type:'id',diff:'medium',q:"What does MDR stand for?",ans:["memory data register"]},
+{id:'arch16',cat:'arch',type:'id',diff:'easy',q:"For a bit: off means what value, and on means what value?",ans:["off means 0, on means 1"]},
+{id:'arch17',cat:'arch',type:'id',diff:'medium',q:"How many bits make up a byte, INCLUDING the parity bit?",ans:["9","9 bits"]},
+{id:'arch18',cat:'arch',type:'id',diff:'hard',q:"Per the parity rule described, the number of 'on' bits in each byte must always be what?",ans:["odd"]},
+{id:'arch19',cat:'arch',type:'enum',diff:'hard',q:"State the sizes of: Word, Doubleword, Quadword, and Paragraph (in bytes/bits).",items:["word = 2 bytes / 16-bit","doubleword = 4 bytes / 32-bit","quadword = 8 bytes / 64-bit","paragraph = 16 bytes / 128-bit"]},
+{id:'arch20',cat:'arch',type:'id',diff:'medium',q:"The CPU performs 3 core steps on instructions: fetch, ___, execute. Fill in the blank.",ans:["decode"]},
+{id:'arch21',cat:'arch',type:'id',diff:'medium',q:"What is the low-level representation of a CPU's instruction set called?",ans:["machine language","machine code"]},
+{id:'arch22',cat:'arch',type:'id',diff:'easy',q:"What is the more human-readable form of machine language, using mnemonic code words, called?",ans:["assembly language"]},
+{id:'arch23',cat:'arch',type:'id',diff:'hard',q:"1 Kilobyte equals 2 to what power (in bytes)?",ans:["2^10","2 10","1024"]},
+{id:'arch24',cat:'arch',type:'id',diff:'hard',q:"1 Megabyte equals what number of bytes exactly (2^20)?",ans:["1048576","1,048,576"]},
+
+// ---------------- REGISTERS & FLAGS ----------------
+{id:'reg1',cat:'reg',type:'id',diff:'medium',q:"How many 32-bit and how many 16-bit processor registers exist in IA-32 architecture?",ans:["ten 32-bit and six 16-bit"]},
+{id:'reg2',cat:'reg',type:'enum',diff:'medium',q:"List the THREE categories of registers in IA-32.",items:["general registers","control registers","segment registers"]},
+{id:'reg3',cat:'reg',type:'enum',diff:'medium',q:"General registers are further divided into which THREE groups?",items:["data registers","pointer registers","index registers"]},
+{id:'reg4',cat:'reg',type:'enum',diff:'hard',q:"List the FOUR 32-bit data registers.",items:["eax","ebx","ecx","edx"]},
+{id:'reg5',cat:'reg',type:'enum',diff:'hard',q:"List all EIGHT 8-bit data registers.",items:["ah","al","bh","bl","ch","cl","dh","dl"]},
+{id:'reg6',cat:'reg',type:'id',diff:'easy',q:"Which register is known as the 'primary accumulator', used in I/O and most arithmetic instructions?",ans:["ax"]},
+{id:'reg7',cat:'reg',type:'id',diff:'easy',q:"Which register is known as the 'base register', used in indexed addressing?",ans:["bx"]},
+{id:'reg8',cat:'reg',type:'id',diff:'easy',q:"Which register is known as the 'count register', storing the loop count in iterative operations?",ans:["cx"]},
+{id:'reg9',cat:'reg',type:'id',diff:'easy',q:"Which register is the 'data register', also used with AX for multiply/divide of large values?",ans:["dx"]},
+{id:'reg10',cat:'reg',type:'enum',diff:'medium',q:"List the THREE 16-bit pointer registers.",items:["ip","sp","bp"]},
+{id:'reg11',cat:'reg',type:'id',diff:'medium',q:"What does the Instruction Pointer (IP) store?",ans:["the offset address of the next instruction to be executed"]},
+{id:'reg12',cat:'reg',type:'id',diff:'medium',q:"What does the Base Pointer (BP) mainly help with?",ans:["referencing the parameter variables passed to a subroutine"]},
+{id:'reg13',cat:'reg',type:'enum',diff:'easy',q:"List the TWO 16-bit index registers.",items:["si","di"]},
+{id:'reg14',cat:'reg',type:'id',diff:'easy',q:"Which index register is used as the source index for string operations?",ans:["si"]},
+{id:'reg15',cat:'reg',type:'id',diff:'easy',q:"Which index register is used as the destination index for string operations?",ans:["di"]},
+{id:'reg16',cat:'reg',type:'enum',diff:'hard',q:"List all NINE flag bits (abbreviations) in the 16-bit Flags register.",items:["of","df","if","tf","sf","zf","af","pf","cf"]},
+{id:'reg17',cat:'reg',type:'id',diff:'medium',q:"What does the Overflow Flag (OF) indicate?",ans:["overflow of a high-order (leftmost) bit of data after a signed arithmetic operation"]},
+{id:'reg18',cat:'reg',type:'id',diff:'medium',q:"If the Direction Flag (DF) is set to 1, which direction does a string operation take?",ans:["right-to-left"]},
+{id:'reg19',cat:'reg',type:'id',diff:'medium',q:"Which flag does the DEBUG program set, allowing single-step mode?",ans:["trap flag","tf"]},
+{id:'reg20',cat:'reg',type:'id',diff:'medium',q:"The Zero Flag (ZF) is set to 1 when the result of an operation is what?",ans:["zero"]},
+{id:'reg21',cat:'reg',type:'id',diff:'hard',q:"The Auxiliary Carry Flag (AF) is set when a carry occurs from which bit into which bit?",ans:["from bit 3 into bit 4"]},
+{id:'reg22',cat:'reg',type:'id',diff:'medium',q:"The Parity Flag (PF) is set to 1 when the result has what kind of number of 1-bits?",ans:["odd"]},
+{id:'reg23',cat:'reg',type:'enum',diff:'medium',q:"List the THREE main segment registers and what each contains.",items:["cs - code segment (instructions)","ds - data segment (data, constants, work areas)","ss - stack segment (data and return addresses)"]},
+{id:'reg24',cat:'reg',type:'enum',diff:'medium',q:"List the extra segment registers besides CS, DS, SS.",items:["es","fs","gs"]},
+{id:'reg25',cat:'reg',type:'id',diff:'hard',q:"A memory segment must begin at an address evenly divisible by what number (hex 10)?",ans:["16"]},
+
+// ---------------- NUMBER SYSTEMS ----------------
+{id:'num1',cat:'numsys',type:'id',diff:'easy',q:"What is the base (radix) of the decimal number system?",ans:["10"]},
+{id:'num2',cat:'numsys',type:'id',diff:'easy',q:"What digits are used in the octal number system?",ans:["0,1,2,3,4,5,6,7","0 1 2 3 4 5 6 7"]},
+{id:'num3',cat:'numsys',type:'id',diff:'easy',q:"What symbols are used in the hexadecimal number system?",ans:["0-9 and a-f","0 to 9 and a to f"]},
+{id:'num4',cat:'numsys',type:'id',diff:'medium',q:"What is the decimal equivalent of binary 11010?",ans:["26"]},
+{id:'num5',cat:'numsys',type:'id',diff:'medium',q:"What is the decimal equivalent of octal 726?",ans:["470"]},
+{id:'num6',cat:'numsys',type:'id',diff:'hard',q:"What is the decimal equivalent of hexadecimal 27FB?",ans:["10234"]},
+{id:'num7',cat:'numsys',type:'id',diff:'easy',q:"What is the term for the rightmost digit of a binary number?",ans:["lsb","least significant bit"]},
+{id:'num8',cat:'numsys',type:'id',diff:'easy',q:"What is the term for the leftmost digit of a binary number?",ans:["msb","most significant bit"]},
+{id:'num9',cat:'numsys',type:'enum',diff:'easy',q:"Complete the memory chart: 1 byte = ? bits · 1 KB = ? bytes · 1 MB = ? KB.",items:["1 byte = 8 bits","1 kb = 1024 bytes","1 mb = 1024 kb"]},
+{id:'num10',cat:'numsys',type:'id',diff:'medium',q:"In hexadecimal, what decimal value does the letter 'F' represent?",ans:["15"]},
+{id:'num11',cat:'numsys',type:'id',diff:'medium',q:"In hexadecimal, what decimal value does the letter 'A' represent?",ans:["10"]},
+{id:'num12',cat:'numsys',type:'id',diff:'hard',q:"ASCII is a 7-bit code, giving how many possible codes?",ans:["128"]},
+{id:'num13',cat:'numsys',type:'enum',diff:'hard',q:"State how many of each the complete alphanumeric set includes: upper case letters, lower case letters, digits, punctuation marks.",items:["26 upper case letters","26 lower case letters","10 digits","7 punctuation marks"]},
+{id:'num14',cat:'numsys',type:'id',diff:'hard',q:"What does ISCII stand for?",ans:["indian script code for information interchange"]},
+{id:'num15',cat:'numsys',type:'enum',diff:'hard',q:"List at least FOUR Indian languages supported by ISCII.",items:["devanagari","tamil","bangla","gujarati","gurmukhi","telugu"]},
+{id:'num16',cat:'numsys',type:'id',diff:'medium',q:"1 Exabyte equals 1024 of what unit?",ans:["pb","petabyte","petabytes"]},
+{id:'num17',cat:'numsys',type:'id',diff:'hard',q:"Octal 726 breaks down as 7×8² + 2×8¹ + 6×8⁰. What is 7×8² alone?",ans:["448"]},
+
+// ---------------- SIGNED INTEGERS ----------------
+{id:'sig1',cat:'signed',type:'enum',diff:'easy',q:"List the THREE ways to represent signed (negative) integers.",items:["sign and magnitude representation","complement method","bias notation (excess notation)"]},
+{id:'sig2',cat:'signed',type:'id',diff:'medium',q:"In Sign & Magnitude representation, what does a sign bit (S) of 1 indicate?",ans:["the integer is negative (or negative zero)"]},
+{id:'sig3',cat:'signed',type:'id',diff:'medium',q:"What is the range of an n-bit Sign & Magnitude number?",ans:["-(2^(n-1)) to +(2^(n-1))"]},
+{id:'sig4',cat:'signed',type:'id',diff:'medium',q:"What is a key disadvantage of Sign & Magnitude representation regarding zero?",ans:["zero is not unique - there is a +0 and a -0"]},
+{id:'sig5',cat:'signed',type:'enum',diff:'medium',q:"List the TWO types of complement in the Complement Method.",items:["r's complement","(r-1)'s complement"]},
+{id:'sig6',cat:'signed',type:'id',diff:'hard',q:"What is the formula for the (r-1)'s complement of m, with n digits, base r?",ans:["(r^n - 1) - m","r^n minus 1 minus m"]},
+{id:'sig7',cat:'signed',type:'id',diff:'hard',q:"What is the 9's complement of 5982?",ans:["4017"]},
+{id:'sig8',cat:'signed',type:'id',diff:'hard',q:"What is the 10's complement of 5982?",ans:["4018"]},
+{id:'sig9',cat:'signed',type:'id',diff:'medium',q:"What is the shortcut method to find the 1's complement of a binary number?",ans:["invert (flip) every bit"]},
+{id:'sig10',cat:'signed',type:'id',diff:'medium',q:"What is the value range for an 8-bit 1's complement number?",ans:["-127 to +127"]},
+{id:'sig11',cat:'signed',type:'id',diff:'medium',q:"In 1's complement addition, if the result produces a carry, what must you do with it?",ans:["add the carry to the lsb (end-around carry)"]},
+{id:'sig12',cat:'signed',type:'id',diff:'medium',q:"How is 2's complement formed from a binary number?",ans:["find the 1's complement, then add 1"]},
+{id:'sig13',cat:'signed',type:'id',diff:'medium',q:"What is the value range for an 8-bit 2's complement number?",ans:["-128 to +127"]},
+{id:'sig14',cat:'signed',type:'id',diff:'hard',q:"What is the shortcut for finding 2's complement directly from the original bits?",ans:["from the lsb find the first 1 bit, then invert all bits after it"]},
+{id:'sig15',cat:'signed',type:'enum',diff:'hard',q:"State the TWO overflow-detection rules for 2's complement addition.",items:["sum of two positive numbers yielding a negative result means overflow","sum of two negative numbers yielding a positive result means overflow"]},
+{id:'sig16',cat:'signed',type:'id',diff:'medium',q:"What is a key advantage of 2's complement over 1's complement?",ans:["only a single zero, and no end-around carry / separate subtract circuit needed"]},
+{id:'sig17',cat:'signed',type:'id',diff:'medium',q:"What is a disadvantage of 2's complement (per the CS2052 slides)?",ans:["multiplication and division are slower"]},
+{id:'sig18',cat:'signed',type:'id',diff:'medium',q:"In Bias Notation, if the bias is B, which value in the range becomes zero?",ans:["b","the value b"]},
+{id:'sig19',cat:'signed',type:'id',diff:'hard',q:"With a bias of 127 for an 8-bit number range, what is the represented range?",ans:["-127 to 128"]},
+{id:'sig20',cat:'signed',type:'id',diff:'hard',q:"In bias-127 notation, what value does the bit pattern 1111 1111 represent?",ans:["128","+128"]},
+{id:'sig21',cat:'signed',type:'id',diff:'hard',q:"In bias-127 notation, what value does the bit pattern 0000 0000 represent?",ans:["-127"]},
+{id:'sig22',cat:'signed',type:'id',diff:'medium',q:"Sign & Magnitude has a disadvantage where adding a negative number is not the same as what operation?",ans:["subtraction"]},
+
+// ---------------- ASCII & UNICODE ----------------
+{id:'asc1',cat:'ascii',type:'id',diff:'easy',q:"What is the ASCII decimal code for the uppercase letter 'A'?",ans:["65"]},
+{id:'asc2',cat:'ascii',type:'id',diff:'easy',q:"What is the ASCII decimal code for the lowercase letter 'a'?",ans:["97"]},
+{id:'asc3',cat:'ascii',type:'id',diff:'medium',q:"By how much (in hex) do uppercase and lowercase ASCII letter codes differ?",ans:["0x20","20 hex","32"]},
+{id:'asc4',cat:'ascii',type:'id',diff:'hard',q:"Pressing the Shift key clears which bit number of the ASCII code, per the CS2052 notes?",ans:["bit 5","5"]},
+{id:'asc5',cat:'ascii',type:'mcq',diff:'easy',q:"What does EBCDIC stand for?",opts:["Extended Binary-Coded Decimal Interchange Code","Extended Binary Character Data Interchange Code","Enhanced Binary Coded Decimal Information Code","Extended Byte Coded Data Interchange Code"],ans:0},
+{id:'asc6',cat:'ascii',type:'id',diff:'medium',q:"Unicode's basic form (UCS-2) is a character set of how many bits?",ans:["16","16-bit","16 bit"]},
+{id:'asc7',cat:'ascii',type:'id',diff:'medium',q:"How many distinct characters can a 16-bit Unicode (UCS-2) set represent?",ans:["65536","65,536"]},
+{id:'asc8',cat:'ascii',type:'id',diff:'hard',q:"What is the Unicode hex range allocated to Basic Latin characters?",ans:["00-7fh","0000h-007fh","00h to 7fh"]},
+{id:'asc9',cat:'ascii',type:'id',diff:'hard',q:"How many Unicode code points are allocated to the Greek range (370H-3FFH)?",ans:["144"]},
+{id:'asc10',cat:'ascii',type:'id',diff:'hard',q:"How many Unicode code points are allocated to CJK (Chinese, Japanese, Korean)?",ans:["42916"]},
+{id:'asc11',cat:'ascii',type:'id',diff:'medium',q:"UCS-4 Unicode uses how many bits?",ans:["32","32-bit","32 bit"]},
+{id:'asc12',cat:'ascii',type:'id',diff:'medium',q:"There are how many standard 7-bit ASCII codes in total?",ans:["128"]},
+{id:'asc13',cat:'ascii',type:'id',diff:'hard',q:"How many Unicode code points are allocated to 'Various Indians' (900H-CFFH)?",ans:["1024"]},
+];
+
+// Build flashcards directly from the question bank (front = question, back = formatted answer)
+function formatAnswer(item){
+  if(item.type==='mcq') return item.opts[item.ans];
+  if(item.type==='id') return item.ans[0];
+  if(item.type==='enum') return item.items.map(x=>"• "+x).join("\n");
+}
+const FLASH = Q.map(item=>({id:item.id,cat:item.cat,front:item.q,back:formatAnswer(item),diff:item.diff}));
+
+/* =========================================================
+   STORAGE
+   ========================================================= */
+let PROGRESS = {quiz:{}, flash:{}};
+async function loadProgress(){
+  try{
+    const r = await window.storage.get('progress-v1', false);
+    if(r && r.value) PROGRESS = JSON.parse(r.value);
+  }catch(e){ /* no saved progress yet */ }
+}
+let saveTimer=null;
+function saveProgress(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async ()=>{
+    try{ await window.storage.set('progress-v1', JSON.stringify(PROGRESS), false); }catch(e){}
+  },300);
+}
+function qProg(id){
+  if(!PROGRESS.quiz[id]) PROGRESS.quiz[id]={attempts:0,solved:false,firstTryCorrect:false};
+  return PROGRESS.quiz[id];
+}
+function fProg(id){
+  if(!PROGRESS.flash[id]) PROGRESS.flash[id]={status:'new',seen:0};
+  return PROGRESS.flash[id];
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function norm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+function fuzzyMatch(input, accepts){
+  const ni = norm(input);
+  if(!ni) return false;
+  return accepts.some(a=>{
+    const na = norm(a);
+    if(!na) return false;
+    if(na.length<=3) return ni.split(' ').includes(na) || ni===na;
+    return ni===na || ni.includes(na) || na.includes(ni);
+  });
+}
+function catName(id){ return (CATEGORIES.find(c=>c.id===id)||{}).name || id; }
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+/* =========================================================
+   BOOT SEQUENCE
+   ========================================================= */
+function boot(){
+  const el = document.getElementById('boot-text');
+  const lines = [
+    "C:\\> LOADING STUDY.EXE ...",
+    "MEMORY CHECK ......... OK  (640K conventional)",
+    "MOUNTING MODULE 1.2  Data Representation ......... OK",
+    "MOUNTING MODULE 2.1  System Operation (DEBUG) ..... OK",
+    "MOUNTING MODULE 2.2  Computer System Architecture . OK",
+    "MOUNTING CS2052      Data Representation Deck ..... OK",
+    "MOUNTING 1.1         Number Systems ............... OK",
+    "INDEXING " + Q.length + " QUESTIONS ACROSS " + CATEGORIES.length + " TOPICS ... DONE",
+    "",
+    "TYPE ANYTHING TO CONTINUE OR WAIT..."
+  ];
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){ finishBoot(); return; }
+  let li=0, ci=0, text="";
+  function tick(){
+    if(li>=lines.length){ setTimeout(finishBoot,400); return; }
+    const line=lines[li];
+    if(ci<line.length){ text+=line[ci]; ci++; el.textContent=text; setTimeout(tick,7); }
+    else{ text+="\n"; li++; ci=0; setTimeout(tick,60); }
+  }
+  tick();
+  document.getElementById('boot').addEventListener('click', finishBoot);
+  window.addEventListener('keydown', finishBoot, {once:true});
+}
+let bootDone=false;
+function finishBoot(){
+  if(bootDone) return; bootDone=true;
+  document.getElementById('boot').classList.add('hidden');
+  document.getElementById('app').style.display='block';
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  await loadProgress();
+  boot();
+  renderDashboard();
+  renderQuizSetup();
+  renderFlashSetup();
+  document.querySelectorAll('nav.tabs button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      ['dash','quiz','flash'].forEach(t=>{
+        document.getElementById('view-'+t).style.display = (t===btn.dataset.tab)?'block':'none';
+      });
+      if(btn.dataset.tab==='dash') renderDashboard();
+      document.getElementById('status-left').textContent = "C:\\STUDY\\"+btn.dataset.tab.toUpperCase()+"> ready_";
+    });
+  });
+});
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+function renderDashboard(){
+  const view = document.getElementById('view-dash');
+  let totalQ=Q.length, solved=0, attempts=0, firstTry=0;
+  Object.values(PROGRESS.quiz).forEach(p=>{ attempts+=p.attempts; if(p.solved) solved++; if(p.firstTryCorrect) firstTry++; });
+
+  let html = `<div class="panel" data-tag="OVERVIEW.SYS">
+    <h2 class="section-title">Command Center</h2>
+    <p class="hint">Live readout of your review progress. Categories with a red flag need the most attention before the exam.</p>
+    <div class="summary-row">
+      <div class="summary-box"><div class="num">${solved}/${totalQ}</div><div class="lbl">Questions Solved</div></div>
+      <div class="summary-box"><div class="num">${attempts}</div><div class="lbl">Total Attempts</div></div>
+      <div class="summary-box"><div class="num">${attempts? Math.round(100*firstTry/Math.max(1,Object.values(PROGRESS.quiz).filter(p=>p.attempts>0).length)) : 0}%</div><div class="lbl">First-Try Accuracy</div></div>
+      <div class="summary-box"><div class="num">${Object.values(PROGRESS.flash).filter(f=>f.status==='known').length}/${FLASH.length}</div><div class="lbl">Flashcards Known</div></div>
+    </div>
+  </div>`;
+
+  html += `<div class="panel" data-tag="MASTERY.LOG"><h2 class="section-title">Mastery by Topic</h2>
+    <p class="hint">Percent solved (ever answered correctly) per topic. Weak spots (&lt;40%) are flagged for focused review.</p>
+    <div class="grid">`;
+  CATEGORIES.forEach(c=>{
+    const items = Q.filter(q=>q.cat===c.id);
+    const solvedCount = items.filter(q=>qProg(q.id).solved).length;
+    const pct = items.length? Math.round(100*solvedCount/items.length) : 0;
+    const attemptedCount = items.filter(q=>qProg(q.id).attempts>0).length;
+    const barClass = pct<40 ? 'low' : (pct<75 ? 'mid' : '');
+    html += `<div class="stat-card">
+      <div class="cat-name"><span>${c.name}</span><span class="code">${pct}%</span></div>
+      <div class="bar-track"><div class="bar-fill ${barClass}" style="width:${pct}%"></div></div>
+      <div class="stat-meta"><span>${solvedCount}/${items.length} solved</span><span>${attemptedCount} attempted</span></div>
+      ${pct<40 && attemptedCount>0 ? '<div class="focus-flag">⚠ FOCUS AREA — review this topic next</div>' : ''}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  html += `<div class="panel" data-tag="ACTIONS"><h2 class="section-title">Quick Actions</h2>
+    <div class="opt-group">
+      <button class="btn" id="dash-quiz-all">Quiz: All Topics</button>
+      <button class="btn ghost" id="dash-flash-all">Flashcards: All Topics</button>
+      <button class="btn danger" id="dash-reset">Reset All Progress</button>
+    </div>
+  </div>`;
+
+  view.innerHTML = html;
+  document.getElementById('dash-reset').onclick = async ()=>{
+    if(confirm('This wipes all quiz and flashcard progress. Continue?')){
+      PROGRESS = {quiz:{}, flash:{}};
+      saveProgress();
+      renderDashboard();
+    }
+  };
+  document.getElementById('dash-quiz-all').onclick = ()=>{
+    document.querySelector('nav.tabs button[data-tab="quiz"]').click();
+  };
+  document.getElementById('dash-flash-all').onclick = ()=>{
+    document.querySelector('nav.tabs button[data-tab="flash"]').click();
+  };
+}
+
+/* =========================================================
+   QUIZ SETUP + RUNNER
+   ========================================================= */
+let quizState = null;
+
+function renderQuizSetup(){
+  const view = document.getElementById('view-quiz');
+  let catChips = `<div class="chip selected" data-cat="all">ALL TOPICS</div>` +
+    CATEGORIES.map(c=>`<div class="chip" data-cat="${c.id}">${c.name}</div>`).join('');
+  let typeChips = ['mcq','id','enum'].map(t=>{
+    const label = t==='mcq'?'Multiple Choice':(t==='id'?'Identification':'Enumeration');
+    return `<div class="chip selected" data-type="${t}">${label}</div>`;
+  }).join('');
+  let diffChips = ['easy','medium','hard'].map(d=>`<div class="chip selected" data-diff="${d}">${d.toUpperCase()}</div>`).join('');
+
+  view.innerHTML = `<div class="panel" data-tag="QUIZ.CFG">
+    <h2 class="section-title">Configure Quiz Run</h2>
+    <p class="hint">Pick topics, question types and difficulty. Every question has unlimited tries — you only move on when you say so.</p>
+    <p class="hint" style="margin-bottom:6px;color:var(--text);">Topics</p>
+    <div class="opt-group" id="cat-chips">${catChips}</div>
+    <p class="hint" style="margin-bottom:6px;color:var(--text);">Question Types</p>
+    <div class="opt-group" id="type-chips">${typeChips}</div>
+    <p class="hint" style="margin-bottom:6px;color:var(--text);">Difficulty</p>
+    <div class="opt-group" id="diff-chips">${diffChips}</div>
+    <div class="opt-group">
+      <button class="btn" id="start-quiz">▶ START QUIZ</button>
+      <button class="btn ghost" id="start-weak">▶ REVIEW WEAK AREAS ONLY</button>
+    </div>
+  </div>
+  <div id="quiz-runner"></div>`;
+
+  function toggle(el, group){
+    if(group==='cat'){
+      document.querySelectorAll('#cat-chips .chip').forEach(c=>c.classList.remove('selected'));
+      el.classList.add('selected');
+    } else {
+      el.classList.toggle('selected');
+    }
+  }
+  document.querySelectorAll('#cat-chips .chip').forEach(c=>c.onclick=()=>toggle(c,'cat'));
+  document.querySelectorAll('#type-chips .chip').forEach(c=>c.onclick=()=>toggle(c,'type'));
+  document.querySelectorAll('#diff-chips .chip').forEach(c=>c.onclick=()=>toggle(c,'diff'));
+
+  document.getElementById('start-quiz').onclick = ()=>{
+    const cat = document.querySelector('#cat-chips .chip.selected').dataset.cat;
+    const types = [...document.querySelectorAll('#type-chips .chip.selected')].map(c=>c.dataset.type);
+    const diffs = [...document.querySelectorAll('#diff-chips .chip.selected')].map(c=>c.dataset.diff);
+    startQuiz(cat, types, diffs, false);
+  };
+  document.getElementById('start-weak').onclick = ()=>{
+    startQuiz('all', ['mcq','id','enum'], ['easy','medium','hard'], true);
+  };
+}
+
+function startQuiz(cat, types, diffs, weakOnly){
+  let pool = Q.filter(q => (cat==='all'||q.cat===cat) && types.includes(q.type) && diffs.includes(q.diff));
+  if(weakOnly){
+    pool = pool.filter(q=>!qProg(q.id).solved);
+    if(pool.length===0) pool = Q.slice();
+  }
+  if(pool.length===0){
+    document.getElementById('quiz-runner').innerHTML = `<div class="panel"><div class="empty-state">No questions match that filter. Try selecting more types or topics.</div></div>`;
+    return;
+  }
+  quizState = {queue: shuffle(pool), idx:0, total: pool.length, picked:null, checked:false};
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion(){
+  const el = document.getElementById('quiz-runner');
+  const item = quizState.queue[quizState.idx];
+  const prog = qProg(item.id);
+  const pct = Math.round(100*(quizState.idx)/quizState.total);
+
+  let body = '';
+  if(item.type==='mcq'){
+    body = `<div class="mcq-list" id="mcq-list">` + item.opts.map((o,i)=>
+      `<div class="mcq-opt" data-i="${i}"><span class="k">${String.fromCharCode(65+i)}.</span><span>${o}</span></div>`
+    ).join('') + `</div>
+    <div class="qa-actions">
+      <button class="btn" id="check-btn" disabled>CHECK ANSWER</button>
+      <button class="btn ghost" id="next-btn" style="display:none;">NEXT QUESTION →</button>
+    </div>
+    <div id="feedback"></div>`;
+  } else if(item.type==='id'){
+    body = `<input type="text" id="id-input" placeholder="Type your answer here...">
+    <div class="qa-actions">
+      <button class="btn" id="check-btn">CHECK ANSWER</button>
+      <button class="btn ghost" id="next-btn" style="display:none;">NEXT QUESTION →</button>
+    </div>
+    <div id="feedback"></div>`;
+  } else if(item.type==='enum'){
+    body = `<textarea id="enum-input" rows="4" placeholder="List your answers — one per line, or comma-separated..."></textarea>
+    <div class="qa-actions">
+      <button class="btn" id="check-btn">CHECK ANSWER</button>
+      <button class="btn ghost" id="next-btn" style="display:none;">NEXT QUESTION →</button>
+    </div>
+    <div id="feedback"></div>`;
+  }
+
+  el.innerHTML = `<div class="panel" data-tag="RUN.LOG">
+    <div class="q-progress">
+      <span>Q ${quizState.idx+1} / ${quizState.total}</span>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+      <span>${prog.attempts>0 ? 'Attempts: '+prog.attempts : 'New'}</span>
+    </div>
+    <div>
+      <span class="badge ${item.diff}">${item.diff}</span>
+      <span class="badge cat">${catName(item.cat)}</span>
+      <span class="q-type-tag">${item.type==='mcq'?'MULTIPLE CHOICE':item.type==='id'?'IDENTIFICATION':'ENUMERATION'}</span>
+    </div>
+    <div class="q-text">${item.q}</div>
+    ${body}
+  </div>`;
+
+  if(item.type==='mcq'){
+    document.querySelectorAll('.mcq-opt').forEach(opt=>{
+      opt.onclick = ()=>{
+        if(quizState.checked) return;
+        document.querySelectorAll('.mcq-opt').forEach(o=>o.classList.remove('picked'));
+        opt.classList.add('picked');
+        quizState.picked = parseInt(opt.dataset.i);
+        document.getElementById('check-btn').disabled=false;
+      };
+    });
+  }
+
+  document.getElementById('check-btn').onclick = ()=>checkAnswer(item);
+  document.getElementById('next-btn').onclick = ()=>{
+    quizState.idx++;
+    quizState.picked=null; quizState.checked=false;
+    if(quizState.idx>=quizState.total){
+      finishQuizRun();
+    } else {
+      renderQuizQuestion();
+    }
+  };
+}
+
+function checkAnswer(item){
+  const prog = qProg(item.id);
+  prog.attempts++;
+  const fb = document.getElementById('feedback');
+  quizState.checked = true;
+
+  if(item.type==='mcq'){
+    const correct = quizState.picked===item.ans;
+    document.querySelectorAll('.mcq-opt').forEach((o,i)=>{
+      if(i===item.ans) o.classList.add('correct');
+      else if(i===quizState.picked && !correct) o.classList.add('wrong');
+    });
+    if(correct){
+      if(prog.attempts===1) prog.firstTryCorrect=true;
+      prog.solved=true;
+      fb.innerHTML = `<div class="feedback">✔ Correct. <span class="ans">${item.opts[item.ans]}</span></div>`;
+      document.getElementById('next-btn').style.display='inline-block';
+      document.getElementById('check-btn').style.display='none';
+    } else {
+      fb.innerHTML = `<div class="feedback bad">✘ Not quite. Pick another option and check again — unlimited tries.</div>`;
+      quizState.checked=false;
+      quizState.picked=null;
+      document.getElementById('check-btn').disabled=true;
+    }
+    saveProgress();
+    return;
+  }
+
+  if(item.type==='id'){
+    const val = document.getElementById('id-input').value;
+    const auto = fuzzyMatch(val, item.ans);
+    fb.innerHTML = `<div class="feedback ${auto?'':'bad'}">
+      ${auto? '✔ Looks right!' : '~ Auto-check unsure — compare with the accepted answer below and self-grade honestly.'}<br>
+      <span class="ans">Accepted answer: ${item.ans[0]}</span>
+      <div class="qa-actions">
+        <button class="btn ghost" id="mark-correct">I GOT IT RIGHT</button>
+        <button class="btn danger" id="mark-wrong">TRY AGAIN</button>
+      </div>
+    </div>`;
+    document.getElementById('mark-correct').onclick = ()=>{
+      if(prog.attempts===1) prog.firstTryCorrect=true;
+      prog.solved=true; saveProgress();
+      fb.innerHTML = `<div class="feedback">✔ Marked correct. <span class="ans">${item.ans[0]}</span></div>`;
+      document.getElementById('next-btn').style.display='inline-block';
+      document.getElementById('check-btn').style.display='none';
+    };
+    document.getElementById('mark-wrong').onclick = ()=>{
+      document.getElementById('id-input').value='';
+      document.getElementById('id-input').focus();
+      quizState.checked=false;
+      saveProgress();
+    };
+    saveProgress();
+    return;
+  }
+
+  if(item.type==='enum'){
+    const raw = document.getElementById('enum-input').value;
+    const userItems = raw.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+    const hits = item.items.map(exp => userItems.some(u=>fuzzyMatch(u,[exp])));
+    const hitCount = hits.filter(Boolean).length;
+    const listHtml = item.items.map((exp,i)=>`<li class="${hits[i]?'hit':'miss'}">${exp}</li>`).join('');
+    fb.innerHTML = `<div class="feedback ${hitCount===item.items.length?'':'bad'}">
+      Matched ${hitCount} / ${item.items.length} items.
+      <ul class="enum-list">${listHtml}</ul>
+      <div class="qa-actions">
+        <button class="btn ghost" id="mark-correct">I GOT THEM ALL</button>
+        <button class="btn danger" id="mark-wrong">TRY AGAIN</button>
+      </div>
+    </div>`;
+    document.getElementById('mark-correct').onclick = ()=>{
+      if(prog.attempts===1) prog.firstTryCorrect=true;
+      prog.solved=true; saveProgress();
+      fb.innerHTML = `<div class="feedback">✔ Marked correct.<ul class="enum-list">${item.items.map(x=>`<li class="hit">${x}</li>`).join('')}</ul></div>`;
+      document.getElementById('next-btn').style.display='inline-block';
+      document.getElementById('check-btn').style.display='none';
+    };
+    document.getElementById('mark-wrong').onclick = ()=>{
+      quizState.checked=false;
+      saveProgress();
+    };
+    if(hitCount===item.items.length){
+      if(prog.attempts===1) prog.firstTryCorrect=true;
+      prog.solved=true;
+    }
+    saveProgress();
+    return;
+  }
+}
+
+function finishQuizRun(){
+  const el = document.getElementById('quiz-runner');
+  el.innerHTML = `<div class="panel" data-tag="RUN.COMPLETE">
+    <h2 class="section-title">Run Complete</h2>
+    <p class="hint">Nice work. Check the Dashboard to see which topics still need attention.</p>
+    <div class="opt-group">
+      <button class="btn" id="again-btn">RUN ANOTHER SET</button>
+      <button class="btn ghost" id="dash-btn">GO TO DASHBOARD</button>
+    </div>
+  </div>`;
+  document.getElementById('again-btn').onclick = renderQuizSetup;
+  document.getElementById('dash-btn').onclick = ()=>document.querySelector('nav.tabs button[data-tab="dash"]').click();
+}
+
+/* =========================================================
+   FLASHCARDS
+   ========================================================= */
+let flashState = null;
+
+function renderFlashSetup(){
+  const view = document.getElementById('view-flash');
+  let catChips = `<div class="chip selected" data-cat="all">ALL TOPICS</div>` +
+    CATEGORIES.map(c=>`<div class="chip" data-cat="${c.id}">${c.name}</div>`).join('');
+  view.innerHTML = `<div class="panel" data-tag="FLASH.CFG">
+    <h2 class="section-title">Flashcard Review</h2>
+    <p class="hint">Click a card to flip it. Mark cards "Still Learning" to bring them back into rotation for focused review.</p>
+    <div class="opt-group" id="fcat-chips">${catChips}</div>
+    <div class="opt-group">
+      <button class="btn" id="start-flash">▶ START DECK</button>
+      <button class="btn ghost" id="start-flash-review">▶ REVIEW "STILL LEARNING" ONLY</button>
+    </div>
+  </div>
+  <div id="flash-runner"></div>`;
+  document.querySelectorAll('#fcat-chips .chip').forEach(c=>c.onclick=()=>{
+    document.querySelectorAll('#fcat-chips .chip').forEach(x=>x.classList.remove('selected'));
+    c.classList.add('selected');
+  });
+  document.getElementById('start-flash').onclick = ()=>{
+    const cat = document.querySelector('#fcat-chips .chip.selected').dataset.cat;
+    startFlash(cat, false);
+  };
+  document.getElementById('start-flash-review').onclick = ()=>{
+    const cat = document.querySelector('#fcat-chips .chip.selected').dataset.cat;
+    startFlash(cat, true);
+  };
+}
+
+function startFlash(cat, reviewOnly){
+  let pool = FLASH.filter(f => cat==='all'||f.cat===cat);
+  if(reviewOnly) pool = pool.filter(f=>fProg(f.id).status==='review');
+  if(pool.length===0){
+    document.getElementById('flash-runner').innerHTML = `<div class="panel"><div class="empty-state">No cards match — nothing marked "Still Learning" here yet.</div></div>`;
+    return;
+  }
+  flashState = {queue: shuffle(pool), idx:0, total: pool.length, flipped:false};
+  renderFlashCard();
+}
+
+function renderFlashCard(){
+  const el = document.getElementById('flash-runner');
+  const item = flashState.queue[flashState.idx];
+  const prog = fProg(item.id);
+  el.innerHTML = `<div class="panel" data-tag="DECK.VIEW">
+    <div class="card-meta">
+      <span>${catName(item.cat)}</span>
+      <span>Card ${flashState.idx+1} / ${flashState.total}</span>
+      <span class="status-pill ${prog.status}">${prog.status}</span>
+    </div>
+    <div class="card-stage">
+      <div class="flashcard" id="fc">
+        <span class="face-label">QUESTION — click to flip</span>
+        <div class="content">${item.front}</div>
+      </div>
+    </div>
+    <div class="card-nav">
+      <button class="btn ghost" id="fc-know" disabled>✔ GOT IT</button>
+      <button class="btn danger" id="fc-review" disabled>↻ STILL LEARNING</button>
+      <button class="btn" id="fc-next">SKIP →</button>
+    </div>
+  </div>`;
+  const fc = document.getElementById('fc');
+  fc.onclick = ()=>{
+    flashState.flipped = !flashState.flipped;
+    if(flashState.flipped){
+      fc.classList.add('back');
+      fc.querySelector('.face-label').textContent='ANSWER — click to flip back';
+      fc.querySelector('.content').textContent = item.back;
+      document.getElementById('fc-know').disabled=false;
+      document.getElementById('fc-review').disabled=false;
+    } else {
+      fc.classList.remove('back');
+      fc.querySelector('.face-label').textContent='QUESTION — click to flip';
+      fc.querySelector('.content').textContent = item.front;
+    }
+  };
+  document.getElementById('fc-know').onclick = (e)=>{
+    e.stopPropagation();
+    prog.status='known'; prog.seen++; saveProgress();
+    advanceFlash();
+  };
+  document.getElementById('fc-review').onclick = (e)=>{
+    e.stopPropagation();
+    prog.status='review'; prog.seen++; saveProgress();
+    advanceFlash();
+  };
+  document.getElementById('fc-next').onclick = (e)=>{
+    e.stopPropagation();
+    advanceFlash();
+  };
+}
+
+function advanceFlash(){
+  flashState.idx++;
+  flashState.flipped=false;
+  if(flashState.idx>=flashState.total){
+    document.getElementById('flash-runner').innerHTML = `<div class="panel" data-tag="DECK.DONE">
+      <h2 class="section-title">Deck Complete</h2>
+      <p class="hint">Review your Dashboard or start another deck.</p>
+      <div class="opt-group">
+        <button class="btn" id="fdeck-again">RUN ANOTHER DECK</button>
+        <button class="btn ghost" id="fdeck-dash">GO TO DASHBOARD</button>
+      </div>
+    </div>`;
+    document.getElementById('fdeck-again').onclick = renderFlashSetup;
+    document.getElementById('fdeck-dash').onclick = ()=>document.querySelector('nav.tabs button[data-tab="dash"]').click();
+  } else {
+    renderFlashCard();
+  }
+}
+
+document.getElementById('status-right') && (document.getElementById('status-right').textContent = new Date().toLocaleDateString());
+</script>
+</body>
+</html>
